@@ -1,0 +1,48 @@
+# --- Rust & Compilation ---
+/target
+**/target
+**/*.rs.bk
+Cargo.lock
+
+# --- Dioxus & Web Frontend ---
+# Dioxus CLI output and cache
+dist/
+.dioxus/
+# WASM artifacts
+*.wasm
+# If you ever use npm packages in the UI
+node_modules/
+
+# --- Mobile Development ---
+gen/
+# Android build artifacts
+android/app/build/
+**/android/app/build/
+# iOS build artifacts
+ios/build/
+**/ios/build/
+
+# --- OSHEEMS Local Data & Databases ---
+# We ignore all SQLite files and logs to keep the repo clean
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.log
+
+# Allow a specific folder for database migrations if needed later,
+# but ignore the actual data files inside
+database/*.db
+database/*.db-journal
+database/*.db-wal
+
+# --- Environment & Secrets ---
+.env
+.env.local
+
+# --- OS & IDEs ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
