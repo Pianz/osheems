@@ -1,0 +1,7 @@
+[package]
+name = "osheems-mobile"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+dioxus = { workspace = true }

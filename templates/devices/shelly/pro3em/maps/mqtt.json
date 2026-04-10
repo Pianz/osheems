@@ -1,0 +1,8 @@
+{
+  "transport_config": {
+  },
+  "points": {
+    "power_a": { "point_topic": "status/em:0", "json_path": "a_act_power", "data_type": "string", "access": "ro" },
+    "voltage_a": { "point_topic": "status/em:0", "json_path": "a_voltager", "data_type": "string", "access": "ro" }
+  }
+}

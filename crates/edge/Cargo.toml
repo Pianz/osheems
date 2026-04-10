@@ -1,0 +1,10 @@
+[package]
+name = "osheems-edge"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+osheems-common = { workspace = true }
+tokio = { workspace = true }
+tokio-modbus = { workspace = true }
+boa_engine = { workspace = true }

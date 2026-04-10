@@ -1,0 +1,61 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/common",
+    "crates/edge",
+    "crates/core",
+    "ui/web",
+    "ui/mobile",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["PIANZOLA Cédric"]
+
+[workspace.dependencies]
+# --- Internal Project Crates ---
+osheems-common = { path = "crates/common" }
+osheems-edge   = { path = "crates/edge" }
+osheems-core   = { path = "crates/core" }
+osheems-webui  = { path = "ui/web" }
+
+# --- Core & Async Runtime ---
+tokio = { version = "1.49", features = ["full"] }
+anyhow = "1.0"
+async-trait = "0.1"
+futures = "0.3"
+chrono = { version = "0.4", features = ["serde"] }
+
+# --- Serialization & Data Handling ---
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+indexmap = { version = "2.0", features = ["serde"] }
+
+# --- Networking & Protocols (Edge focus) ---
+axum = "0.8"
+tokio-modbus = "0.17"
+tokio-serial = "5.4"
+rumqttc = "0.25"
+serialport = "4.3"
+tower-http = { version = "0.6", features = ["cors"] }
+
+# --- Scripting Engine ---
+boa_engine = "0.19"
+
+# --- Database Storage ---
+rusqlite = { version = "0.31", features = ["bundled"] }
+
+# --- File System & Utils ---
+walkdir = "2.5"
+log = "0.4"
+env_logger = "0.10"
+
+# --- Frontend & UI Stack ---
+dioxus = { version = "0.7.3", features = ["web"] }
+
+[profile.release]
+opt-level = "z"     # Optimize for binary size (ideal for Edge devices)
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Maximize optimizations at the cost of compile time
+panic = "abort"     # Remove panic strings to further reduce size
