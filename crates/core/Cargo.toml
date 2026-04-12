@@ -1,0 +1,9 @@
+[package]
+name = "osheems-core"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+osheems-common = { workspace = true }
+axum = { workspace = true }
+tokio = { workspace = true }

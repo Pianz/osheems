@@ -1,0 +1,25 @@
+{
+  "template_id": "shelly_pro_3em",
+  "version": "1.0.0",
+  "entity_type": "device",
+  "identity": {
+    "brand": "SHELLY",
+    "model": "Pro 3EM",
+    "traits": ["three_phase_meter"],
+    "protocols": ["modbus_tcp", "mqtt"]
+  },
+  "config": {
+    "unit_id": { "type": "number", "default": 1, "description": "Modbus Unit ID", "only_for": "modbus_tcp" },
+    "device_topic": { "type": "string", "default": "shellypro3em-default", "description": "Base MQTT Topic", "only_for": "mqtt" }
+  },
+  "points": {
+    "states": [
+      { "id": "power_a", "trait": "power_meter", "unit": "W" },
+      { "id": "relay_state", "trait": "switch_state", "unit": "bool" }
+    ],
+    "actions": [
+      { "id": "relay_switch", "trait": "switch_control", "type": "bool" },
+      { "id": "temp_setpoint", "trait": "thermostat_setpoint", "unit": "°C" }
+    ]
+  }
+}

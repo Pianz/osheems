@@ -1,0 +1,10 @@
+{
+  "transport_config": {
+    "byte_order": "ABDC",
+    "word_order": "BigEndian"
+  },
+  "points": {
+    "power_a": { "address": 1007, "quantity": 2, "data_type": "float32", "scale": 1.0, "access": "ro" },
+    "voltage_a": { "address": 1000, "quantity": 2, "data_type": "float32", "scale": 1.0,"access": "ro" }
+  }
+}
