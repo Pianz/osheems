@@ -39,6 +39,9 @@ impl TraitRegistry {
             TraitDefinition::new("current", TraitCategory::Electric, "A", "RMS Current"),
             TraitDefinition::new("power_factor", TraitCategory::Electric, "", "Power factor"),
 
+            // --- Climat ---
+            TraitDefinition::new("thermostat_setpoint", TraitCategory::Thermal, "number", "Temperature Setpoint"),
+
             // --- Control ---
             TraitDefinition::new("switch_state", TraitCategory::Control, "bool", "State of a relay/switch"),
             TraitDefinition::new("switch_cmd", TraitCategory::Control, "bool", "Control command for a switch"),

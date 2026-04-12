@@ -39,7 +39,7 @@ impl ToString for UserRole {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
-    pub entity_id: i64,
+    pub entity_id: String,
     pub username: String,
     pub role: UserRole,
     pub last_login: Option<String>,

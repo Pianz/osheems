@@ -23,7 +23,7 @@ impl TelemetryDatabase {
         }
     }
 
-    /// Fournit un accès temporaire à la connexion du mois en cours
+    /// Provides temporary access to the current month's connection
     pub fn with_conn<F, T>(&mut self, f: F) -> Result<T>
     where
     F: FnOnce(&Connection) -> T,
@@ -49,7 +49,7 @@ impl TelemetryDatabase {
 
         let conn = Connection::open(db_path)?;
 
-        // --- OPTIMISATION WAL ---
+        // --- WAL OPTIMIZATION ---
         conn.execute_batch("
         PRAGMA journal_mode = WAL;
         PRAGMA synchronous = NORMAL;
@@ -58,7 +58,7 @@ impl TelemetryDatabase {
         conn.execute(
             "CREATE TABLE IF NOT EXISTS telemetry (
                 timestamp   INTEGER NOT NULL,
-                entity_id   INTEGER NOT NULL,
+                entity_id   TEXT NOT NULL, -- Changed from INTEGER to TEXT
                 key         TEXT NOT NULL,
                 value       REAL NOT NULL
         )",
@@ -76,7 +76,8 @@ impl TelemetryDatabase {
         Ok(self.conn.as_ref().unwrap())
     }
 
-    pub fn insert_data(&mut self, entity_id: i64, key: &str, value: f64) -> Result<()> {
+    /// Inserts a new telemetry point using a String ID
+    pub fn insert_data(&mut self, entity_id: &str, key: &str, value: f64) -> Result<()> {
         let timestamp = Local::now().timestamp();
         let conn = self.ensure_connection()?;
 

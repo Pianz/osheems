@@ -10,7 +10,7 @@ use rusqlite::types::{FromSql, FromSqlResult, FromSqlError, ToSql, ToSqlOutput, 
 #[serde(rename_all = "snake_case")]
 pub enum EntityType {
     // --- System & Users ---
-    System,      // OSHEEMS Core (ID 1)
+    System,      // OSHEEMS Core
     User,        // User identity and access rights
 
     // --- Organization & Topology ---
@@ -32,7 +32,6 @@ pub enum EntityType {
     Service,     // Internal Service: Dashboard UI, API Server, MQTT Broker
 }
 
-// Implémentation de Display pour la conversion Enum -> String
 impl fmt::Display for EntityType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let s = match self {
@@ -53,7 +52,6 @@ impl fmt::Display for EntityType {
     }
 }
 
-// Implémentation de FromStr pour la conversion String -> Enum (plus robuste que From<String>)
 impl FromStr for EntityType {
     type Err = String;
 
@@ -76,11 +74,10 @@ impl FromStr for EntityType {
     }
 }
 
-// --- RUSQLITE TRAITS (The "Pro" Way) ---
+// --- RUSQLITE TRAITS ---
 
 impl ToSql for EntityType {
     fn to_sql(&self) -> rusqlite::Result<ToSqlOutput<'_>> {
-        // On stocke l'ID texte en minuscule dans SQLite
         Ok(ToSqlOutput::from(self.to_string()))
     }
 }
@@ -88,7 +85,6 @@ impl ToSql for EntityType {
 impl FromSql for EntityType {
     fn column_result(value: ValueRef<'_>) -> FromSqlResult<Self> {
         let s = value.as_str()?;
-        // On utilise l'implémentation FromStr définie plus haut
         s.parse::<EntityType>().map_err(|_| FromSqlError::InvalidType)
     }
 }
@@ -97,11 +93,15 @@ impl FromSql for EntityType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
-    pub id: i64,
+    /// Unique identifier (Slug/Path). Replaces both old 'id' (i64) and 'name'.
+    /// Example: "edge1/kitchen/shelly_pro3em"
+    pub id: String,
     pub entity_type: EntityType,
     pub template_id: Option<String>,
-    pub name: String,
+
+    /// Human-friendly display name. Example: "Main Meter"
     pub label: Option<String>,
+
     pub description: Option<String>,
     pub configuration: Value,
     pub is_enabled: bool,
@@ -111,10 +111,9 @@ pub struct Entity {
 impl Default for Entity {
     fn default() -> Self {
         Self {
-            id: 0,
+            id: "new_entity".to_string(),
             entity_type: EntityType::Device,
             template_id: None,
-            name: "new_entity".to_string(),
             label: None,
             description: None,
             configuration: Value::Object(Default::default()),

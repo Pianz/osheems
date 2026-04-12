@@ -6,37 +6,48 @@ use serde_json::json;
 
 impl DatabaseManager {
     pub fn bootstrap(&self) -> Result<()> {
-        // On aide le compilateur en spécifiant le type de retour de la closure : Result<bool>
-        let system_exists = self.main.with_conn(|conn| -> Result<bool> {
-            let mut stmt = conn.prepare("SELECT 1 FROM entities WHERE id = 1")?;
-            Ok(stmt.exists([])?)
-        })?;
+        let system_id = "system";
 
-        if system_exists {
+        // 1. Vérification de l'existence
+        if self.get_entity_by_id(system_id).is_ok() {
             return Ok(());
         }
 
         println!("[BOOTSTRAP] Initializing OSHEEMS default environment...");
 
-        // On crée l'entité système (ID 1)
-        self.main.with_conn(|conn| -> Result<()> {
-            conn.execute(
-                "INSERT INTO entities (id, entity_type, name, label, is_system)
-            VALUES (1, 'system', 'osheems_core', 'OSHEEMS Core System', 1)",
-                         [],
-            )?;
-            Ok(())
-        })?;
+        // 2. Création de l'entité système complète
+        self.create_entity(
+            system_id,
+            "system",
+            None,
+            Some("OSHEEMS Core System"),
+            Some("Root entity for system settings"),
+            &json!({}),
+            true
+        )?;
 
-        // Création des utilisateurs via la façade (déjà en Result<i64>)
-        self.create_user("osheems", "05H33M5", UserRole::SuperAdmin)?;
-        self.create_user("operator", "1234", UserRole::Operator)?;
+        // 3. Création des utilisateurs système avec descriptions
+        self.create_user(
+            "osheems",
+            "05H33M5",
+            UserRole::SuperAdmin,
+            Some("Default root administrator account"),
+            true
+        )?;
 
-        // Configuration par défaut via la façade
-        self.set_setting(1, "system.version", &json!("0.1.0"))?;
-        self.set_setting(1, "system.name", &json!("My OSHEEMS Installation"))?;
+        self.create_user(
+            "operator",
+            "1234",
+            UserRole::Operator,
+            Some("Standard system operator account"),
+            true
+        )?;
 
-        println!("[BOOTSTRAP] Default users created successfully.");
+        // 4. Configuration initiale
+        self.set_setting(system_id, "system.version", &json!("0.1.0"))?;
+        self.set_setting(system_id, "system.name", &json!("My OSHEEMS Installation"))?;
+
+        println!("[BOOTSTRAP] Default environment and users created successfully.");
         Ok(())
     }
 }
