@@ -1,86 +1,60 @@
 use osheems_common::templates::TemplateManager;
 use std::path::PathBuf;
-use std::fs;
 
 fn main() {
-    // 1. Initialise les logs
+    // 1. Initialise les logs pour voir les détails du parsing
     env_logger::init();
 
-    // 2. Crée une arborescence de test
-    let test_path = PathBuf::from("./test_templates");
-    let shelly_dir = test_path.join("devices/shelly/pro3em");
-    let mapping_dir = shelly_dir.join("mapping");
+    println!("--- VALIDATION DES TEMPLATES OSHEEMS ---");
 
-    if test_path.exists() {
-        fs::remove_dir_all(&test_path).unwrap();
+    // 2. Chemin vers le dossier racine
+    // On part du principe que tu lances le test depuis la racine du workspace
+    let templates_path = PathBuf::from("templates");
+
+    if !templates_path.exists() {
+        eprintln!("❌ Erreur : Le dossier 'templates/' est introuvable à la racine.");
+        return;
     }
-    fs::create_dir_all(&mapping_dir).unwrap();
 
-    // 3. Le JSON du Template
-    let template_json = r#"{
-    "template_id": "shelly_pro_3em",
-    "version": "1.0.0",
-    "entity_type": "device",
-    "identity": {
-    "brand": "SHELLY",
-    "model": "Pro 3EM",
-    "traits": ["three_phase_meter"],
-    "protocols": ["modbus_tcp", "mqtt"]
-},
-"config": {
-"unit_id": { "type": "number", "default": 1, "description": "Modbus Unit ID" }
-},
-"points": {
-"states": [
-{ "id": "power_a", "trait": "power_active", "unit": "W" }
-],
-"actions": [
-{ "id": "relay_switch", "trait": "switch_cmd", "type": "bool" }
-]
-}
-}"#;
+    // 3. Initialisation du TemplateManager
+    println!("🔍 Analyse du dossier : {:?}", templates_path.canonicalize().unwrap_or(templates_path.clone()));
+    let manager = TemplateManager::new(templates_path);
 
-// 4. Les Mappings
-let modbus_mapping_json = r#"{
-"transport_config": { "byte_order": "ABDC" },
-"points": {
-"power_a": { "address": 1007, "quantity": 2, "data_type": "float32" }
-}
-}"#;
+    // 4. Liste les templates trouvés pour debug
+    // (Si tu as une méthode pour lister les IDs, sinon on teste en direct)
 
-let mqtt_mapping_json = r#"{
-"transport_config": { },
-"points": {
-"power_a": { "point_topic": "status/em:0", "json_path": "a_act_power" }
-}
-}"#;
+    // 5. Test spécifique du Shelly Pro 3EM
+    let target_id = "shelly_pro_3em";
+    println!("\n--- Vérification du template : {} ---", target_id);
 
-// --- LA CORRECTION EST ICI ---
-fs::write(shelly_dir.join("template.json"), template_json).unwrap();
-fs::write(mapping_dir.join("modbus.json"), modbus_mapping_json).unwrap();
-fs::write(mapping_dir.join("mqtt.json"), mqtt_mapping_json).unwrap(); // <--- Cette ligne manquait !
-// -----------------------------
+    if let Some(t) = manager.get_template(target_id) {
+        println!("✅ Template trouvé !");
+        println!("   Identité : {} - {}", t.identity.brand, t.identity.model);
+        println!("   Type d'entité : {}", t.entity_type);
 
-// 5. Test du TemplateManager
-println!("\n--- Initialisation du TemplateManager ---");
-let manager = TemplateManager::new(test_path);
+        // Vérification des points (states/actions)
+        let states_count = t.points.states.len();
+        let actions_count = t.points.actions.len();
+        println!("   Points définis : {} états, {} actions", states_count, actions_count);
 
-// 6. Vérification
-if let Some(t) = manager.get_template("shelly_pro_3em") {
-    println!("✅ Succès ! Template '{}' chargé.", t.template_id);
-    println!("Brand: {}", t.identity.brand);
+        // Vérification des mappings protocolaires
+        if !t.mappings.is_empty() {
+            let protocols: Vec<_> = t.mappings.keys().collect();
+            println!("✅ Mappings détectés : {:?}", protocols);
 
-    if !t.mappings.is_empty() {
-        // Ici tu devrais voir ["modbus", "mqtt"]
-        println!("Detected mappings: {:?}", t.mappings.keys());
-
-        if t.mappings.contains_key("modbus") && t.mappings.contains_key("mqtt") {
-            println!("  -> All mappings (Modbus & MQTT) correctly parsed!");
+            for proto in protocols {
+                match proto.as_str() {
+                    "modbus" => println!("     -> Configuration Modbus valide."),
+                    "mqtt" => println!("     -> Configuration MQTT valide."),
+                    _ => println!("     -> Protocole '{}' détecté.", proto),
+                }
+            }
+        } else {
+            println!("⚠️ Attention : Aucun mapping (Modbus/MQTT) trouvé pour ce template.");
         }
     } else {
-        println!("⚠️ Aucun mapping trouvé.");
+        println!("❌ Erreur : Le template '{}' n'a pas été chargé.", target_id);
     }
-} else {
-    println!("❌ Échec : Le template n'a pas été trouvé.");
-}
+
+    println!("\n--- Fin de validation ---");
 }

@@ -14,11 +14,11 @@
   },
   "points": {
     "states": [
-      { "id": "power_a", "trait": "power_meter", "unit": "W" },
-      { "id": "relay_state", "trait": "switch_state", "unit": "bool" }
+      { "id": "power_a", "trait": "power_active", "unit": "W" },
+      { "id": "relay_state", "trait": "switch_cmd", "unit": "bool" }
     ],
     "actions": [
-      { "id": "relay_switch", "trait": "switch_control", "type": "bool" },
+      { "id": "relay_switch", "trait": "switch_cmd", "type": "bool" },
       { "id": "temp_setpoint", "trait": "thermostat_setpoint", "unit": "°C" }
     ]
   }

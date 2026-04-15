@@ -13,7 +13,6 @@ pub use telemetry_db::TelemetryDatabase;
 use crate::entities::Entity;
 use crate::relations::RelationRecord;
 use crate::users::{User, UserRole};
-//use crate::settings::Setting;
 
 #[cfg(feature = "native")]
 pub struct DatabaseManager {
@@ -24,13 +23,11 @@ pub struct DatabaseManager {
 #[cfg(feature = "native")]
 impl DatabaseManager {
     pub fn new() -> Result<Self> {
-        // 1. Détermination du chemin de stockage (Standard Snap ou Local)
         let db_dir = match env::var("SNAP_DATA") {
             Ok(val) => PathBuf::from(val),
             Err(_) => PathBuf::from("database"),
         };
 
-        // 2. Initialisation des bases
         let main_path = db_dir.join("main.db");
         let main = MainDatabase::open(&main_path)?;
         let telemetry = TelemetryDatabase::new(&db_dir);
@@ -40,7 +37,6 @@ impl DatabaseManager {
             telemetry: Arc::new(Mutex::new(telemetry)),
         };
 
-        // 3. Initialisation automatique des données de base (System + Users par défaut)
         db_manager.bootstrap()?;
 
         Ok(db_manager)
@@ -48,97 +44,63 @@ impl DatabaseManager {
 
     // --- ENTITIES ---
 
-    pub fn create_entity(&self, entity_type: &str, name: &str, template_id: Option<&str>, config: &serde_json::Value) -> Result<i64> {
-        self.main.create_entity(entity_type, name, template_id, config)
+    pub fn create_entity(
+        &self,
+        id: &str,
+        entity_type: &str,
+        template_id: Option<&str>,
+        label: Option<&str>,
+        description: Option<&str>,
+        config: &serde_json::Value,
+        is_system: bool
+    ) -> Result<()> {
+        self.main.create_entity(id, entity_type, template_id, label, description, config, is_system)
     }
 
-    pub fn get_entity_by_id(&self, id: i64) -> Result<Entity> {
+    pub fn get_entity_by_id(&self, id: &str) -> Result<Entity> {
         self.main.get_entity_by_id(id)
-    }
-
-    pub fn get_entity_by_name(&self, name: &str) -> Result<Entity> {
-        self.main.get_entity_by_name(name)
     }
 
     pub fn get_entities(&self, entity_type: Option<&str>) -> Result<Vec<Entity>> {
         self.main.get_entities(entity_type)
     }
 
-    pub fn update_entity(&self, id: i64, label: Option<&str>, config: &serde_json::Value, is_enabled: bool) -> Result<()> {
+    pub fn update_entity(&self, id: &str, label: Option<&str>, config: &serde_json::Value, is_enabled: bool) -> Result<()> {
         self.main.update_entity(id, label, config, is_enabled)
     }
 
-    pub fn delete_entity(&self, id: i64) -> Result<()> {
+    pub fn delete_entity(&self, id: &str) -> Result<()> {
         self.main.delete_entity(id)
     }
 
     // --- RELATIONS ---
 
-    pub fn create_relation(&self, from_id: i64, predicate: &str, to_id: i64, metadata: &serde_json::Value) -> Result<()> {
+    pub fn create_relation(&self, from_id: &str, predicate: &str, to_id: &str, metadata: &serde_json::Value) -> Result<()> {
         self.main.create_relation(from_id, predicate, to_id, metadata)
     }
 
-    pub fn get_relations(&self, from_id: Option<i64>, predicate: Option<&str>, to_id: Option<i64>) -> Result<Vec<RelationRecord>> {
+    pub fn get_relations(&self, from_id: Option<&str>, predicate: Option<&str>, to_id: Option<&str>) -> Result<Vec<RelationRecord>> {
         self.main.get_relations(from_id, predicate, to_id)
     }
 
-    pub fn get_relations_by_from_id(&self, from_id: i64) -> Result<Vec<RelationRecord>> {
-        self.main.get_relations_by_from_id(from_id)
-    }
-
-    pub fn get_relations_by_to_id(&self, to_id: i64) -> Result<Vec<RelationRecord>> {
-        self.main.get_relations_by_to_id(to_id)
-    }
-
-    pub fn get_relations_by_predicate(&self, predicate: &str) -> Result<Vec<RelationRecord>> {
-        self.main.get_relations_by_predicate(predicate)
-    }
-
-    pub fn delete_relation(&self, from_id: i64, predicate: &str, to_id: i64) -> Result<()> {
+    pub fn delete_relation(&self, from_id: &str, predicate: &str, to_id: &str) -> Result<()> {
         self.main.delete_relation(from_id, predicate, to_id)
-    }
-
-    // --- TELEMETRY ---
-
-    pub fn log_data(&self, entity_id: i64, key: &str, value: f64) -> Result<()> {
-        let mut tel = self.telemetry.lock().unwrap();
-        tel.insert_data(entity_id, key, value)
-    }
-
-    pub fn get_current_month_telemetry(&self, entity_id: i64, key: &str) -> Result<Vec<(i64, f64)>> {
-        let mut tel = self.telemetry.lock().unwrap();
-
-        tel.with_conn(|conn| {
-            let mut stmt = conn.prepare(
-                "SELECT timestamp, value FROM telemetry WHERE entity_id = ?1 AND key = ?2 ORDER BY timestamp ASC"
-            )?;
-
-            let rows = stmt.query_map(params![entity_id, key], |row| {
-                Ok((row.get(0)?, row.get(1)?))
-            })?;
-
-            rows.collect::<Result<Vec<(i64, f64)>>>()
-        })?
     }
 
     // --- SETTINGS ---
 
-    pub fn set_setting(&self, entity_id: i64, key: &str, value: &serde_json::Value) -> Result<()> {
+    pub fn set_setting(&self, entity_id: &str, key: &str, value: &serde_json::Value) -> Result<()> {
         self.main.set_setting(entity_id, key, value)
     }
 
-    pub fn get_setting(&self, entity_id: i64, key: &str) -> Result<serde_json::Value> {
+    pub fn get_setting(&self, entity_id: &str, key: &str) -> Result<serde_json::Value> {
         self.main.get_setting(entity_id, key)
     }
 
     // --- USERS ---
 
-    pub fn create_user(&self, username: &str, password_hash: &str, role: UserRole) -> Result<i64> {
-        self.main.create_user(username, password_hash, &role.to_string())
-    }
-
-    pub fn delete_user(&self, user_entity_id: i64) -> Result<()> {
-        self.main.delete_user(user_entity_id)
+    pub fn create_user(&self, username: &str, password_hash: &str, role: UserRole, description: Option<&str>, is_system: bool) -> Result<String> {
+        self.main.create_user(username, password_hash, &role.to_string(), description, is_system)
     }
 
     pub fn get_user_by_username(&self, username: &str) -> Result<User> {

@@ -121,7 +121,7 @@ impl TemplateManager {
 
         // --- Automatic Mapping Discovery ---
         let parent_dir = path.parent().unwrap_or_else(|| Path::new("."));
-        let mapping_dir = parent_dir.join("mapping");
+        let mapping_dir = parent_dir.join("mappings");
 
         if mapping_dir.is_dir() {
             let mut mappings = HashMap::new();
