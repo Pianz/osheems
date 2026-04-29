@@ -32,15 +32,22 @@ impl TraitRegistry {
         let mut traits = HashMap::new();
 
         let official_list = vec![
-            // --- Electric ---
-            TraitDefinition::new("power_active", TraitCategory::Electric, "W", "Active power (real)"),
-            TraitDefinition::new("energy_active_import", TraitCategory::Electric, "kWh", "Cumulative energy imported"),
+            // --- Electric (Mesures instantanées) ---
             TraitDefinition::new("voltage", TraitCategory::Electric, "V", "RMS Voltage"),
             TraitDefinition::new("current", TraitCategory::Electric, "A", "RMS Current"),
+            TraitDefinition::new("power_active", TraitCategory::Electric, "W", "Active power (real)"),
+            TraitDefinition::new("power_apparent", TraitCategory::Electric, "VA", "Apparent power"),
+            TraitDefinition::new("power_reactive", TraitCategory::Electric, "VAR", "Reactive power"),
             TraitDefinition::new("power_factor", TraitCategory::Electric, "", "Power factor"),
 
-            // --- Climat ---
-            TraitDefinition::new("thermostat_setpoint", TraitCategory::Thermal, "number", "Temperature Setpoint"),
+            // --- Electric (Compteurs d'énergie cumulés) ---
+            TraitDefinition::new("energy_active", TraitCategory::Electric, "Wh", "Cumulative active energy (import)"),
+            TraitDefinition::new("energy_active_returned", TraitCategory::Electric, "Wh", "Cumulative active energy returned (export)"),
+            TraitDefinition::new("energy_active_import_kwh", TraitCategory::Electric, "kWh", "Cumulative energy imported (standard unit)"),
+
+            // --- Thermal ---
+            TraitDefinition::new("temperature", TraitCategory::Thermal, "°C", "Ambient or sensor temperature"),
+            TraitDefinition::new("thermostat_setpoint", TraitCategory::Thermal, "°C", "Temperature Setpoint"),
 
             // --- Control ---
             TraitDefinition::new("switch_state", TraitCategory::Control, "bool", "State of a relay/switch"),
@@ -48,10 +55,12 @@ impl TraitRegistry {
 
             // --- Storage ---
             TraitDefinition::new("battery_soc", TraitCategory::Storage, "%", "State of Charge"),
+            TraitDefinition::new("battery_voltage", TraitCategory::Storage, "V", "Battery bank voltage"),
 
             // --- System ---
             TraitDefinition::new("rssi", TraitCategory::System, "dBm", "Signal strength"),
             TraitDefinition::new("uptime", TraitCategory::System, "s", "System uptime"),
+            TraitDefinition::new("status", TraitCategory::System, "string", "Device status message"),
         ];
 
         for t in official_list {
@@ -73,7 +82,7 @@ impl TraitRegistry {
 }
 
 impl TraitDefinition {
-    fn new(id: &str, category: TraitCategory, unit: &str, desc: &str) -> Self {
+    pub fn new(id: &str, category: TraitCategory, unit: &str, desc: &str) -> Self {
         Self {
             id: id.to_string(),
             category,

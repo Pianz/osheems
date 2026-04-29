@@ -8,18 +8,31 @@
     "traits": ["three_phase_meter"],
     "protocols": ["modbus_tcp", "mqtt"]
   },
-  "config": {
+  "configuration": {
     "unit_id": { "type": "number", "default": 1, "description": "Modbus Unit ID", "only_for": "modbus_tcp" },
-    "device_topic": { "type": "string", "default": "shellypro3em-default", "description": "Base MQTT Topic", "only_for": "mqtt" }
+    "device_topic": { "type": "string", "default": "shellypro3em-default", "description": "MQTT Device Topic", "only_for": "mqtt" }
   },
   "points": {
     "states": [
-      { "id": "power_a", "trait": "power_active", "unit": "W" },
-      { "id": "relay_state", "trait": "switch_cmd", "unit": "bool" }
+      { "id": "a_voltage", "trait": "voltage", "unit": "V" },
+      { "id": "a_current", "trait": "current", "unit": "A" },
+      { "id": "a_active_power", "trait": "power_active", "unit": "W" },
+      { "id": "a_active_energy", "trait": "energy_active", "unit": "Wh" },
+
+      { "id": "b_voltage", "trait": "voltage", "unit": "V" },
+      { "id" : "b_current", "trait": "current", "unit": "A" },
+      { "id": "b_active_power", "trait": "power_active", "unit": "W" },
+      { "id": "b_active_energy", "trait": "energy_active", "unit": "Wh" },
+
+      { "id": "c_voltage", "trait": "voltage", "unit": "V" },
+      { "id": "c_current", "trait": "current", "unit": "A" },
+      { "id": "c_active_power", "trait": "power_active", "unit": "W" },
+      { "id": "c_active_energy", "trait": "energy_active", "unit": "Wh" },
+
+      { "id": "total_active_power", "trait": "power_active", "unit": "W" },
+      { "id": "total_active_energy", "trait": "energy_active", "unit": "Wh" },
+      { "id": "total_returned_energy", "trait": "energy_active_returned", "unit": "Wh" }
     ],
-    "actions": [
-      { "id": "relay_switch", "trait": "switch_cmd", "type": "bool" },
-      { "id": "temp_setpoint", "trait": "thermostat_setpoint", "unit": "°C" }
-    ]
+    "actions": []
   }
 }

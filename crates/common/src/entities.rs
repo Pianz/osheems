@@ -93,19 +93,24 @@ impl FromSql for EntityType {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Entity {
-    /// Unique identifier (Slug/Path). Replaces both old 'id' (i64) and 'name'.
-    /// Example: "edge1/kitchen/shelly_pro3em"
+    /// Unique identifier (Slug/Path).
     pub id: String,
     pub entity_type: EntityType,
     pub template_id: Option<String>,
 
-    /// Human-friendly display name. Example: "Main Meter"
+    /// Human-friendly display name.
     pub label: Option<String>,
 
     pub description: Option<String>,
+
+    /// User-modifiable configuration
     pub configuration: Value,
+
+    /// System-managed properties
+    pub attributes: Value,
+
     pub is_enabled: bool,
-    pub is_system: bool,
+    pub is_system: bool, // Correspond à notre colonne SQL
 }
 
 impl Default for Entity {
@@ -117,6 +122,7 @@ impl Default for Entity {
             label: None,
             description: None,
             configuration: Value::Object(Default::default()),
+            attributes: Value::Object(Default::default()),
             is_enabled: true,
             is_system: false,
         }

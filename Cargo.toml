@@ -26,6 +26,7 @@ anyhow = "1.0"
 async-trait = "0.1"
 futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
+rhai = { version = "1.19.0", features = ["serde", "sync"] }
 
 # --- Serialization & Data Handling ---
 serde = { version = "1.0", features = ["derive"] }
@@ -39,6 +40,7 @@ tokio-serial = "5.4"
 rumqttc = "0.25"
 serialport = "4.3"
 tower-http = { version = "0.6", features = ["cors"] }
+i2cdev = "0.6"
 
 # --- Scripting Engine ---
 boa_engine = "0.19"

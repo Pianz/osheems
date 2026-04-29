@@ -1,0 +1,34 @@
+{
+  "template_id": "gateways/mqtt",
+  "version": "1.0.0",
+  "entity_type": "gateway",
+  "identity": {
+    "brand": "GENERIC",
+    "model": "MQTT Broker Client",
+    "traits": ["connection_oriented", "streaming", "gateway_based"],
+    "protocols": ["mqtt"],
+    "parent": {
+      "category": "interface",
+      "filter": "system_network",
+      "required": true
+    }
+  },
+  "configuration": {
+    "broker_host": { "type": "string", "default": "192.168.5.11", "description": "MQTT Broker Hostname or IP", "required": true },
+    "broker_port": { "type": "number", "default": 1883, "description": "MQTT Broker Port", "required": true },
+    "broker_topic": { "type": "string", "default": "osheems", "description": "MQTT Broker Root Topic", "required": true },
+    "client_id": { "type": "string", "default": "osheems_core", "description": "MQTT Client ID", "required": true },
+    "username": { "type": "string", "default": "", "description": "MQTT Client Username", "required": false, "secret": true },
+    "password": { "type": "string", "default": "", "description": "MQTT Client Password", "required": false, "secret": true },
+    "keepalive": { "type": "number", "default": 60, "description": "MQTT Client Keepalive", "required": true }
+  },
+  "points": {
+    "states": [
+      { "id": "connection_status", "trait": "switch_cmd", "unit": "bool" },
+      { "id": "uptime", "trait": "switch_cmd", "unit": "s" }
+    ],
+    "actions": [
+      { "id": "reconnect", "trait": "switch_cmd", "type": "bool" }
+    ]
+  }
+}

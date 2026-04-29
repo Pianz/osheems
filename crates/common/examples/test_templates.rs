@@ -1,14 +1,15 @@
-use osheems_common::templates::TemplateManager;
+use osheems_common::managers::template::TemplateManager; // Import mis à jour
 use std::path::PathBuf;
 
-fn main() {
+#[tokio::main] // Nécessaire car get_template est async
+async fn main() {
     // 1. Initialise les logs pour voir les détails du parsing
+    // Assure-je que env_logger est dans ton Cargo.toml
     env_logger::init();
 
     println!("--- VALIDATION DES TEMPLATES OSHEEMS ---");
 
     // 2. Chemin vers le dossier racine
-    // On part du principe que tu lances le test depuis la racine du workspace
     let templates_path = PathBuf::from("templates");
 
     if !templates_path.exists() {
@@ -17,17 +18,16 @@ fn main() {
     }
 
     // 3. Initialisation du TemplateManager
+    // Note: reload_sync est appelé dans le new()
     println!("🔍 Analyse du dossier : {:?}", templates_path.canonicalize().unwrap_or(templates_path.clone()));
     let manager = TemplateManager::new(templates_path);
 
-    // 4. Liste les templates trouvés pour debug
-    // (Si tu as une méthode pour lister les IDs, sinon on teste en direct)
-
-    // 5. Test spécifique du Shelly Pro 3EM
+    // 4. Test spécifique du Shelly Pro 3EM
     let target_id = "shelly_pro_3em";
     println!("\n--- Vérification du template : {} ---", target_id);
 
-    if let Some(t) = manager.get_template(target_id) {
+    // Ajout du .await car l'accès au RwLock est asynchrone
+    if let Some(t) = manager.get_template(target_id).await {
         println!("✅ Template trouvé !");
         println!("   Identité : {} - {}", t.identity.brand, t.identity.model);
         println!("   Type d'entité : {}", t.entity_type);
@@ -54,6 +54,16 @@ fn main() {
         }
     } else {
         println!("❌ Erreur : Le template '{}' n'a pas été chargé.", target_id);
+
+        // Aide au debug : Lister ce qui a été trouvé
+        let all_templates = manager.list_templates().await;
+        if all_templates.is_empty() {
+            println!("   (Aucun template n'est chargé dans le manager)");
+        } else {
+            println!("   Templates disponibles : {:?}",
+                     all_templates.iter().map(|t| &t.template_id).collect::<Vec<_>>()
+            );
+        }
     }
 
     println!("\n--- Fin de validation ---");
