@@ -30,7 +30,7 @@ impl ExecutionEngine {
     }
 
     pub fn prepare(&self, bundle: &ActiveDriver) -> Result<CompiledDriver, String> {
-        // Compilation Gateway
+        // Compilation Gateway (cherche main.rhai dans la map des scripts chargés par TemplateManager)
         let gateway_content = bundle.gateway.scripts.get("main.rhai")
         .ok_or_else(|| format!("Gateway '{}': main.rhai not found", bundle.gateway_id))?;
 
@@ -56,7 +56,7 @@ impl ExecutionEngine {
         })
     }
 
-    /// Injecte tout le contexte OSHEEMS dans Rhai
+    /// Injecte le contexte OSHEEMS dans Rhai
     fn build_context(&self, bundle: &ActiveDriver) -> Map {
         let mut context = Map::new();
 
@@ -72,29 +72,28 @@ impl ExecutionEngine {
         context
     }
 
-    /// Convertit un ResourceBundle en Map Rhai avec support de l'ancienne et nouvelle architecture
+    /// Convertit un ResourceBundle en Map Rhai (Compatible V2)
     fn bundle_to_rhai(&self, bundle: &ResourceBundle) -> Map {
         let mut map = Map::new();
 
-        // 1. Accès direct (Nouvelle architecture v2)
-        let template = rhai::serde::to_dynamic(bundle.template.clone()).unwrap_or_default();
+        // 1. Nouvelle architecture : on injecte le contenu de definition (JSON) directement
+        let template_def = rhai::serde::to_dynamic(bundle.template.clone()).unwrap_or_default();
         let mappings = rhai::serde::to_dynamic(bundle.mappings.clone()).unwrap_or_default();
         let config = rhai::serde::to_dynamic(bundle.configuration.clone()).unwrap_or_default();
 
-        map.insert("template".into(), template);
+        map.insert("template".into(), template_def);
         map.insert("mappings".into(), mappings);
         map.insert("config".into(), config.clone());
 
-        // 2. Bloc de compatibilité "entity" (Pour éviter l'erreur sur relation_attributes)
+        // 2. Bloc de compatibilité "entity" pour les scripts existants
+        // Permet d'accéder à entity.relation_attributes ou entity.config
         let mut entity = Map::new();
-
-        // On récupère spécifiquement les attributs de relation pour le routage
         let rel_attr = bundle.configuration.get("relation_attributes")
         .cloned()
         .unwrap_or(serde_json::json!({}));
 
         entity.insert("relation_attributes".into(), rhai::serde::to_dynamic(rel_attr).unwrap_or_default());
-        entity.insert("config".into(), config); // Doublon intentionnel pour compatibilité script
+        entity.insert("config".into(), config);
 
         map.insert("entity".into(), entity.into());
 
