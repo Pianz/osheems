@@ -2,7 +2,25 @@
   "transport_config": {
   },
   "points": {
-    "power_a": { "point_topic": "status/em:0", "json_path": "a_act_power", "data_type": "string", "access": "ro" },
-    "voltage_a": { "point_topic": "status/em:0", "json_path": "a_voltager", "data_type": "string", "access": "ro" }
+    "a_voltage": { "point_topic": "status/em:0", "json_path": "a_voltage", "data_type": "number", "access": "ro" },
+    "a_current": { "point_topic": "status/em:0", "json_path": "a_current", "data_type": "number", "access": "ro" },
+    "a_active_power": { "point_topic": "status/em:0", "json_path": "a_act_power", "data_type": "number", "access": "ro" },
+
+    "b_voltage": { "point_topic": "status/em:0", "json_path": "b_voltage", "data_type": "number", "access": "ro" },
+    "b_current": { "point_topic": "status/em:0", "json_path": "b_current", "data_type": "number", "access": "ro" },
+    "b_active_power": { "point_topic": "status/em:0", "json_path": "b_act_power", "data_type": "number", "access": "ro" },
+
+    "c_voltage": { "point_topic": "status/em:0", "json_path": "c_voltage", "data_type": "number", "access": "ro" },
+    "c_current": { "point_topic": "status/em:0", "json_path": "c_current", "data_type": "number", "access": "ro" },
+    "c_active_power": { "point_topic": "status/em:0", "json_path": "c_act_power", "data_type": "number", "access": "ro" },
+
+    "total_active_power": { "point_topic": "status/em:0", "json_path": "total_act_power", "data_type": "number", "access": "ro" },
+
+    "a_active_energy": { "point_topic": "status/emdata:0", "json_path": "a_total_act_energy", "data_type": "number", "access": "ro" },
+    "b_active_energy": { "point_topic": "status/emdata:0", "json_path": "b_total_act_energy", "data_type": "number", "access": "ro" },
+    "c_active_energy": { "point_topic": "status/emdata:0", "json_path": "c_total_act_energy", "data_type": "number", "access": "ro" },
+
+    "total_active_energy": { "point_topic": "status/emdata:0", "json_path": "total_act", "data_type": "number", "access": "ro" },
+    "total_returned_energy": { "point_topic": "status/emdata:0", "json_path": "total_act_ret", "data_type": "number", "access": "ro" }
   }
 }

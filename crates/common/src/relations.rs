@@ -13,10 +13,19 @@ pub struct RelationRecord {
     pub to_id: String,
 
     /// Additional context (e.g., calculation coefficients)
-    pub metadata: Value,
+    pub attributes: Value,
+
+    /// Protection flag for structural relations
+    pub is_system: bool, // Ajouté pour la cohérence avec la DB
 }
 
 pub mod predicates {
+    /// Used for connectivity (e.g., Gateway -> Interface)
+    pub const USES_INTERFACE: &str = "uses_interface"; // Ajouté car utilisé dans le bootstrap
+
+    /// Used for system structure (e.g., Root -> Gateway)
+    pub const HAS_GATEWAY: &str = "has_gateway"; // Ajouté car utilisé dans le bootstrap
+
     /// Used for Virtual Devices (e.g., Summing two meters)
     pub const CALCULATES_FOR: &str = "calculates_for";
 
