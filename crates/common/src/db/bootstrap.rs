@@ -55,8 +55,8 @@ impl MainDatabase {
                                "broker_port": 1883,
                                "broker_topic": "osheems",
                                "client_id": "osheems_core",
-                               "username": "osheems",
-                               "password": "05H33M5" // La virgule a été ajoutée ici pour corriger la macro
+                               "username": "oshems",
+                               "password": "05H3M5" // La virgule a été ajoutée ici pour corriger la macro
                            }),
                            &json!({ "protocol": "mqtt" }),
                            true // is_system

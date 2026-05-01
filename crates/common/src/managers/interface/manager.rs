@@ -1,29 +1,54 @@
+// crates/common/src/managers/interface/manager.rs
+
 use crate::managers::database::DatabaseManager;
 use crate::managers::interface::AsyncInterface;
 use crate::managers::interface::uart::UartInterface;
 use crate::managers::interface::network::NetworkInterface;
 use crate::managers::interface::i2c::I2cInterface;
+use crate::core_bus::manager::CoreBusManager;
+use crate::core_bus::types::MqttSuffix;
 use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use log::{info, error, warn};
 use serde_json::{json, Value};
 
 pub struct InterfaceManager {
     db_manager: Arc<DatabaseManager>,
+    bus: Arc<CoreBusManager>,
     /// Registry of instantiated interfaces (ID -> Instance)
     interfaces: RwLock<HashMap<String, Arc<dyn AsyncInterface>>>,
 }
 
 impl InterfaceManager {
-    pub fn new(db_manager: Arc<DatabaseManager>) -> Self {
+    pub fn new(db_manager: Arc<DatabaseManager>, bus: Arc<CoreBusManager>) -> Self {
         Self {
             db_manager,
+            bus,
             interfaces: RwLock::new(HashMap::new()),
+        }
+    }
+
+    /// Helper to publish logs to CoreBus
+    async fn publish_log(&self, level: &str, id: &str, message: &str) {
+        let payload_json = json!({
+            "id": id,
+            "level": level,
+            "module": "interface_manager",
+            "msg": message,
+            "ts": chrono::Utc::now().to_rfc3339()
+        });
+
+        if let Ok(payload) = serde_json::to_vec(&payload_json) {
+            let sub_topic = format!("interface/{}", level);
+            self.bus.publish("osheems/core/system", MqttSuffix::Logs, &sub_topic, payload).await;
         }
     }
 
     /// Main entry point: synchronizes DB with hardware and launches enabled interfaces
     pub async fn start(&self) -> Result<(), String> {
+        info!("[INTERFACE] Starting hardware scan...");
+
         // 1. Detect hardware and resolve dynamic paths (PnP)
         let discovered_paths = self.scan_hardware().await?;
 
@@ -39,11 +64,10 @@ impl InterfaceManager {
 
         #[cfg(target_os = "linux")]
         {
-            // --- 1. UART SCAN (PnP with Hardware IDs) ---
+            // --- 1. UART SCAN ---
             if let Ok(ports) = serialport::available_ports() {
                 for p in ports {
                     if let serialport::SerialPortType::UsbPort(info) = p.port_type {
-                        // Generate a unique Hardware ID (VID:PID:Serial)
                         let hw_id = format!("{:04x}:{:04x}:{}",
                                             info.vid,
                                             info.pid,
@@ -53,31 +77,26 @@ impl InterfaceManager {
                         let port_id = format!("usb_{}", hw_id.replace(":", "_"));
                         discovered_paths.insert(port_id.clone(), p.port_name.clone());
 
-                        // Register in DB if it's the first time we see this device
                         if self.db_manager.main.get_entity(&port_id).is_err() {
-                            // User modifiable config
-                            let config = json!({
-                                "baud_rate": 9600
-                            });
-
-                            // System detected attributes
+                            let config = json!({ "baud_rate": 9600 });
                             let attributes = json!({
                                 "driver": "uart",
                                 "hw_id": hw_id,
                                 "original_path": p.port_name
                             });
 
-                            self.db_manager.main.create_entity(
+                            let _ = self.db_manager.main.create_entity(
                                 &port_id,
                                 "interface",
                                 None,
                                 Some(&format!("USB Device ({})", p.port_name)),
-                                                               Some("Plug'N'Play hardware interface"),
-                                                               &config,
-                                                               &attributes, // 7th argument
-                                                               false        // 8th argument
-                            ).ok();
-                            println!("[PnP] New UART hardware registered: {}", port_id);
+                                                                       Some("Plug'N'Play hardware interface"),
+                                                                       &config,
+                                                                       &attributes,
+                                                                       false
+                            );
+
+                            self.publish_log("info", &port_id, "New UART hardware discovered and registered").await;
                         }
                     }
                 }
@@ -87,7 +106,7 @@ impl InterfaceManager {
             if let Ok(entries) = std::fs::read_dir("/sys/class/net/") {
                 for entry in entries.flatten() {
                     let iface_name = entry.file_name().into_string().unwrap_or_default();
-                    if iface_name == "lo" || iface_name.starts_with("veth") || iface_name.starts_with("br-") || iface_name.starts_with("docker") {
+                    if ["lo", "veth", "br-", "docker"].iter().any(|&pre| iface_name.starts_with(pre)) {
                         continue;
                     }
 
@@ -101,17 +120,18 @@ impl InterfaceManager {
                             "interface_name": iface_name
                         });
 
-                        self.db_manager.main.create_entity(
+                        let _ = self.db_manager.main.create_entity(
                             &port_id,
                             "interface",
                             None,
                             Some(&format!("Network Interface: {}", iface_name)),
-                                                           Some("Automatically detected network card"),
-                                                           &config,
-                                                           &attributes, // 7th argument
-                                                           true         // 8th argument (System)
-                        ).ok();
-                        println!("[PnP] New Network hardware registered: {}", port_id);
+                                                                   Some("Automatically detected network card"),
+                                                                   &config,
+                                                                   &attributes,
+                                                                   true
+                        );
+
+                        self.publish_log("info", &port_id, "New network interface registered").await;
                     }
                 }
             }
@@ -119,35 +139,35 @@ impl InterfaceManager {
         Ok(discovered_paths)
     }
 
-    /// Iterates through the DB to instantiate and open enabled interfaces
     async fn load_enabled_interfaces(&self, discovered_paths: HashMap<String, String>) -> Result<(), String> {
         let entities = self.db_manager.main.get_all_entities(Some("interface"))
         .map_err(|e| e.to_string())?;
 
         for entity in entities {
             if entity.is_enabled {
-                // We extract the driver from attributes
                 let driver = entity.attributes.get("driver").and_then(|v| v.as_str()).unwrap_or("");
                 let mut runtime_config = entity.configuration.clone();
 
-                // Inject the driver for the spawn_interface logic
                 if let Value::Object(ref mut map) = runtime_config {
                     map.insert("driver".to_string(), json!(driver));
                 }
 
-                // PnP Resolution: If it's a UART/USB device, we update the path with the one currently found
                 if let Some(current_path) = discovered_paths.get(&entity.id) {
-                    if driver == "uart" {
-                        runtime_config["path"] = json!(current_path);
-                    } else if driver == "network" {
-                        runtime_config["interface_name"] = json!(current_path);
+                    match driver {
+                        "uart" => { runtime_config["path"] = json!(current_path); },
+                        "network" => { runtime_config["interface_name"] = json!(current_path); },
+                        _ => {}
                     }
 
                     if let Err(e) = self.spawn_interface(entity.id.clone(), &runtime_config).await {
-                        eprintln!("[INTERFACE] Error starting {}: {}", entity.id, e);
+                        let err_msg = format!("Failed to spawn interface: {}", e);
+                        error!("[INTERFACE] {}", err_msg);
+                        self.publish_log("error", &entity.id, &err_msg).await;
                     }
                 } else {
-                    eprintln!("[INTERFACE] Hardware {} is enabled but not physically present. Skipping.", entity.id);
+                    let warn_msg = "Hardware enabled but not physically present. Skipping.";
+                    warn!("[INTERFACE] {} ({})", entity.id, warn_msg);
+                    self.publish_log("warn", &entity.id, warn_msg).await;
                 }
             }
         }
@@ -169,7 +189,12 @@ impl InterfaceManager {
         let mut registry = self.interfaces.write().await;
         registry.insert(id.clone(), Arc::from(interface));
 
-        println!("[INTERFACE] Interface '{}' started successfully.", id);
+        info!("[INTERFACE] Interface '{}' started successfully.", id);
+
+        let evt_payload = serde_json::to_vec(&json!({ "id": id, "status": "online" })).unwrap_or_default();
+        self.bus.publish("osheems/core/system", MqttSuffix::Evt, "interface/started", evt_payload).await;
+
+        self.publish_log("info", &id, "Interface opened and registered in runtime").await;
         Ok(())
     }
 
