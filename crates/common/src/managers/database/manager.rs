@@ -1,32 +1,37 @@
+// crates/common/src/managers/database/manager.rs
+
 use crate::db::{MainDatabase, TelemetryDatabase};
 use std::sync::{Arc, Mutex};
 use std::path::PathBuf;
 use std::env;
 use rusqlite::Result;
+use log::{info, error};
 
 pub struct DatabaseManager {
-    /// Accès direct à la base principale
+    /// Direct access to the main configuration database
     pub main: MainDatabase,
-    /// Accès à la télémétrie protégé par Mutex pour la rotation des fichiers
+    /// Thread-safe access to telemetry for file rotation handling
     pub telemetry: Arc<Mutex<TelemetryDatabase>>,
 }
 
 impl DatabaseManager {
-    /// Initialise le gestionnaire de base de données
+    /// Initializes the database management layer for OSHEEMS
     pub fn new() -> Result<Self> {
-        // Détermination du dossier de stockage (Snap ou local)
+        // Determine storage directory (Snap environment or local fallback)
         let db_dir = match env::var("SNAP_DATA") {
             Ok(val) => PathBuf::from(val),
             Err(_) => PathBuf::from("database"),
         };
 
-        // Création du dossier si inexistant (important pour le premier lancement)
+        // Create directory if it does not exist (crucial for first run)
         if !db_dir.exists() {
-            std::fs::create_dir_all(&db_dir).ok();
+            if let Err(e) = std::fs::create_dir_all(&db_dir) {
+                error!("[DB_MGR] Failed to create database directory: {}", e);
+            }
         }
 
-        // Initialisation des bases de bas niveau
-        // Note: J'utilise "main.db" pour correspondre à ton fichier de test de hier
+        // Initialize low-level database handlers
+        // Using "main.db" as per your previous test files
         let main_path = db_dir.join("main.db");
         let main = MainDatabase::open(&main_path)?;
         let telemetry = TelemetryDatabase::new(&db_dir);
@@ -36,18 +41,24 @@ impl DatabaseManager {
             telemetry: Arc::new(Mutex::new(telemetry)),
         };
 
-        // Exécution du bootstrap via la couche DB
-        // IMPORTANT: Vérifie que dans ton implémentation de bootstrap(),
-        // les appels à create_relation et create_setting passent bien le flag 'true'
-        // pour les composants vitaux du système.
+        // Execute bootstrap via the DB layer
+        // Ensure that in bootstrap(), vital system components
+        // use 'true' for the system-protected flag.
+        info!("[DB_MGR] Running database bootstrap...");
         manager.main.bootstrap()?;
 
+        info!("[DB_MGR] Database systems initialized at: {:?}", db_dir);
         Ok(manager)
     }
 
-    /// Helper pour effectuer une maintenance manuelle sur les fichiers de télémétrie
+    /// Helper to perform manual maintenance on telemetry files
     pub fn cleanup_telemetry(&self) {
-        let tel = self.telemetry.lock().unwrap();
-        tel.cleanup_old_files();
+        match self.telemetry.lock() {
+            Ok(tel) => {
+                info!("[DB_MGR] Starting telemetry maintenance...");
+                tel.cleanup_old_files();
+            },
+            Err(e) => error!("[DB_MGR] Failed to lock telemetry for cleanup: {}", e),
+        }
     }
 }

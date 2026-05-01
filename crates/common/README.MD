@@ -60,7 +60,7 @@ All managers follow the modular pattern: `mod.rs` for traits/types and `manager.
 ```text
 src/common/
 └── managers/
-    ├── mod.rs                      # Main entry point - exports all managers
+    ├── mod.rs              # Main entry point - exports all managers
     ├── system/             # Global system state & health
     │   ├── mod.rs
     │   └── manager.rs

@@ -17,6 +17,7 @@ pub struct TemplateManager {
 }
 
 impl TemplateManager {
+    /// Creates a new TemplateManager and performs an initial synchronous scan
     pub fn new(base_path: PathBuf) -> Self {
         let manager = Self {
             base_path,
@@ -28,6 +29,7 @@ impl TemplateManager {
         manager
     }
 
+    /// Synchronously scans the base directory for template.json files
     fn reload_sync(&self) {
         info!("[TEMPLATE] Scanning templates in {:?}", self.base_path);
         let mut new_templates = HashMap::new();
@@ -39,9 +41,9 @@ impl TemplateManager {
             {
                 let path = entry.path();
 
-                // 1. Calcul de la clé relative
+                // 1. Calculate the relative key for template identification
                 let relative_key = if let Ok(rel_path) = path.parent().unwrap().strip_prefix(&self.base_path) {
-                    // Normalisation : On remplace les antislashes Windows par des slashes et on enlève les bords
+                    // Normalization: Replace Windows backslashes and trim slashes
                     let s = rel_path.to_string_lossy().replace("\\", "/");
                     let cleaned = s.trim_matches('/');
 
@@ -52,7 +54,6 @@ impl TemplateManager {
 
                 match self.load_template(path) {
                     Ok(template) => {
-                        // Cette ligne s'affichera avec RUST_LOG=info
                         info!("[TEMPLATE] Registered: '{}' (v{}) | Mappings: {} | Scripts: {}",
                               relative_key,
                               template.definition.version,
@@ -73,16 +74,17 @@ impl TemplateManager {
             info!("[TEMPLATE] Scan complete. {} templates active.", self.count_sync());
     }
 
+    /// Loads a single template from a given directory path
     fn load_template(&self, path: &Path) -> Result<EntityTemplate, String> {
         let parent_dir = path.parent().unwrap_or_else(|| Path::new("."));
 
-        // 1. Chargement de la Definition (template.json)
+        // 1. Load the Definition (template.json)
         let def_content = fs::read_to_string(path)
         .map_err(|e| format!("Read error (template.json): {}", e))?;
         let definition: TemplateDefinition = serde_json::from_str(&def_content)
         .map_err(|e| format!("JSON error (template.json): {}", e))?;
 
-        // 2. Chargement des Mappings (dossier /mappings)
+        // 2. Load Mappings (from /mappings folder)
         let mut mappings = HashMap::new();
         let mapping_dir = parent_dir.join("mappings");
         if mapping_dir.is_dir() {
@@ -99,7 +101,7 @@ impl TemplateManager {
             }
         }
 
-        // 3. Chargement des Scripts (dossier /scripts)
+        // 3. Load Scripts (from /scripts folder)
         let mut scripts = HashMap::new();
         let scripts_dir = parent_dir.join("scripts");
         if scripts_dir.is_dir() {
@@ -122,27 +124,28 @@ impl TemplateManager {
             scripts,
         };
 
-        // Validation par rapport au registre des traits
+        // Validate template points against the TraitRegistry
         self.validate_traits(&template)?;
 
         Ok(template)
     }
 
+    /// Ensures that all traits referenced in the template exist in the registry
     fn validate_traits(&self, template: &EntityTemplate) -> Result<(), String> {
         for point in &template.definition.points.states {
             if !self.traits.exists(&point.r#trait) {
-                return Err(format!("Unknown trait '{}' in states for template at {:?}", point.r#trait, template.definition.template_id));
+                return Err(format!("Unknown trait '{}' in states for template '{}'", point.r#trait, template.definition.identity.model));
             }
         }
         for point in &template.definition.points.actions {
             if !self.traits.exists(&point.r#trait) {
-                return Err(format!("Unknown trait '{}' in actions for template at {:?}", point.r#trait, template.definition.template_id));
+                return Err(format!("Unknown trait '{}' in actions for template '{}'", point.r#trait, template.definition.identity.model));
             }
         }
         Ok(())
     }
 
-    // --- Accesseurs ---
+    // --- Accessors ---
 
     pub async fn get_template(&self, id: &str) -> Option<EntityTemplate> {
         let lock = self.templates.read().await;
