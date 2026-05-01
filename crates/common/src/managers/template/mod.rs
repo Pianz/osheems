@@ -1,10 +1,12 @@
+// crates/common/src/managers/template/mod.rs
+
 pub mod manager;
 
 pub use manager::TemplateManager;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-// --- Modèles de données pour le Mapping (Technique) ---
+// --- 1. Miroir du dossier 'mappings/' (Technique) ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ProtocolMapping {
@@ -12,7 +14,7 @@ pub struct ProtocolMapping {
     pub points: HashMap<String, serde_json::Value>,
 }
 
-// --- Modèles de données pour le Template (Métier) ---
+// --- 2. Miroir du fichier 'template.json' (Métier / Définition) ---
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DataPoint {
@@ -44,14 +46,30 @@ pub struct TemplateIdentity {
     pub protocols: Vec<String>,
 }
 
+/// Représente le contenu strict du fichier template.json
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct EntityTemplate {
+pub struct TemplateDefinition {
     pub template_id: String,
     pub version: String,
     pub entity_type: String,
     pub identity: TemplateIdentity,
     pub configuration: HashMap<String, ConfigField>,
     pub points: TemplatePoints,
+}
+
+// --- 3. L'Objet Global : EntityTemplate (Le Dossier) ---
+
+/// Conteneur racine représentant un dossier de template complet
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct EntityTemplate {
+    /// Le contenu du fichier template.json
+    pub definition: TemplateDefinition,
+
+    /// Le contenu du dossier mappings/ (Clé = nom du protocole, ex: "mqtt")
     #[serde(default)]
     pub mappings: HashMap<String, ProtocolMapping>,
+
+    /// Le contenu du dossier scripts/ (Clé = nom du fichier, ex: "main.rhai")
+    #[serde(default)]
+    pub scripts: HashMap<String, String>,
 }

@@ -48,7 +48,7 @@ impl DeviceManager {
             "device",
             Some(template_id),
                                    Some(label),
-                                   Some(&format!("Device {} based on {}", label, template.identity.model)),
+                                   Some(&format!("Device {} based on {}", label, template.definition.identity.model)),
                                    &json!({}),
                                    &json!({}),
                                    false
